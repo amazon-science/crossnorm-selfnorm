@@ -1,7 +1,7 @@
 ## CrossNorm (CN) and SelfNorm (SN) (Accepted at ICCV 2021)
 
 This is the official PyTorch implementation of our [CNSN paper](https://arxiv.org/abs/2102.02811), in which we propose CrossNorm (CN) and SelfNorm (SN), two simple, effective, and complementary normalization techniques to improve generalization robustness under distribution shifts.
-
+![](./vis/cnsn-framework.png)
 ```
 @article{tang2021cnsn,
   title={CrossNorm and SelfNorm for Generalization under Distribution Shifts},
@@ -10,7 +10,6 @@ This is the official PyTorch implementation of our [CNSN paper](https://arxiv.or
   year={2021}
 }
 ```
-![](./vis/cnsn_framework.pdf)
 
 ## Install dependencies
   ```shell
