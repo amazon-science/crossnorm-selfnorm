@@ -23,8 +23,7 @@ This repository is a PyTorch implementation of CrossNorm (CN) and SelfNorm (SN) 
      ln -s /path_to_gtav_dataset dataset/gtav
      ```
 
-   - Download ImageNet pre-trained models and put them under folder `initmodel` for weight initialization.
-   - ResNet50-SN are available:
+   - Download ImageNet pre-trained models and put them under folder `initmodel` for weight initialization. [ResNet50-SN](https://drive.google.com/file/d/1ZXJGI7TVuU0SF5ihY4n-Ql97pXUMqY0m/view?usp=sharing) are available.
 
    - Specify the gpu used in config then do training:
 
