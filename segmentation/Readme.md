@@ -2,7 +2,7 @@
 
 ### Introduction
 
-This repository is a PyTorch implementation of CrossNorm (CN) and SelfNorm (SN) for semantic segmentation in domain generalization setting. We implement CN/SN based on the scene parsing codebase (https://github.com/hszhao/semseg)
+This repository is a PyTorch implementation of CrossNorm (CN) and SelfNorm (SN) for semantic segmentation in domain generalization setting (GTA5 -> Cityscapes). We implement CN/SN based on the scene parsing codebase (https://github.com/hszhao/semseg)
 
 
 ### Usage
