@@ -19,7 +19,7 @@ config=config/${dataset}/${dataset}_${exp_name}.yaml
 now=$(date +"%Y%m%d_%H%M%S")
 
 mkdir -p ${model_dir} ${result_dir}
-cp tool/train_sncn.py tool/test.sh tool/test.py ${config} ${exp_dir}
+cp tool/train_sncn.py ${config} ${exp_dir}
 
 export PYTHONPATH=./
 python -u ${exp_dir}/train_sncn.py \

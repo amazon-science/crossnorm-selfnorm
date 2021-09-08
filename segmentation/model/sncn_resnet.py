@@ -7,7 +7,9 @@ try:
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
-from .utils import CrossNormComb, SelfNorm, SNCN, SRMLayer
+#from .utils import CrossNormComb, SelfNorm, SNCN, SRMLayer
+#from .. import cnsn
+from .cnsn import CrossNorm, SelfNorm, CNSN, SRMLayer
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -104,9 +106,7 @@ class BasicBlockCustom(nn.Module):
 
         if 'cn' in sncn_type:
             print('cn_type: {}'.format(cn_type))
-            crossnorm = CrossNormComb(cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1,
-                                      bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2,
-                                      way=way, crop=crop)
+            crossnorm = CrossNorm(beta=beta, crop=crop)
         else:
             crossnorm = None
 
@@ -121,7 +121,7 @@ class BasicBlockCustom(nn.Module):
 
         # if using selfnorma and crossnorm at the same time, then use them at the same location
         # separating their positions is not supported currently.
-        self.sncn = SNCN(selfnorm=selfnorm, crossnorm=crossnorm)
+        self.sncn = CNSN(selfnorm=selfnorm, crossnorm=crossnorm)
         
         self.pos = pos
         if pos is not None:
@@ -246,9 +246,7 @@ class BottleneckCustom(nn.Module):
 
             if 'cn' in sncn_type and cn_pos is None:
                 print('cn_type: {}'.format(cn_type))
-                crossnorm = CrossNormComb(cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1,
-                                          bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2,
-                                          way=way, crop=crop)
+                crossnorm = CrossNorm(crop=crop, beta=beta)
             else:
                 crossnorm = None
 
@@ -269,11 +267,9 @@ class BottleneckCustom(nn.Module):
 
             # if using selfnorm and crossnorm at the same time, then use them at the same location
             # separating their positions is not supported currently.
-            self.sncn = SNCN(selfnorm=selfnorm, crossnorm=crossnorm)
+            self.sncn = CNSN(selfnorm=selfnorm, crossnorm=crossnorm)
             if 'cn' in sncn_type and cn_pos is not None:
-                self.real_cn = CrossNormComb(cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1,
-                                          bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2,
-                                          way=way, crop=crop)
+                self.real_cn = CrossNorm(beta=beta, crop=crop)
             self.cn_pos = cn_pos
 
 
@@ -378,9 +374,7 @@ class ResNet(nn.Module):
 
         self.block_idxs = block_idxs
         if block_idxs and 0 in block_idxs:
-            self.img_cn = CrossNormComb(cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1,
-                                          bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2,
-                                          way=way, crop=crop)
+            self.img_cn = CrossNorm(crop=crop, beta=beta)
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = norm_layer(self.inplanes)
@@ -423,7 +417,7 @@ class ResNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear) and m.bias is not None:
                 m.bias.data.zero_()
-            elif isinstance(m, CrossNormComb):
+            elif isinstance(m, CrossNorm):
                 self.cn_modules.append(m)
 
         if 'cn' in sncn_type or cn_pos is not None:
