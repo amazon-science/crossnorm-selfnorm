@@ -1,3 +1,6 @@
+# Code is adapted from https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
+# which is originally licensed under BSD 3-Clause License
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -7,9 +10,7 @@ try:
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
-#from .utils import CrossNormComb, SelfNorm, SNCN, SRMLayer
-#from .. import cnsn
-from .cnsn import CrossNorm, SelfNorm, CNSN, SRMLayer
+from .cnsn import CrossNorm, SelfNorm, CNSN 
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -84,7 +85,7 @@ class BasicBlock(nn.Module):
 class BasicBlockCustom(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, pos, cn_type, beta, bbx_thres_1, bbx_thres_2, lam_1, lam_2, way, crop, sncn_type, stride=1, downsample=None, groups=1,
+    def __init__(self, inplanes, planes, pos, beta, crop, cnsn_type, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None):
         super(BasicBlockCustom, self).__init__()
         if norm_layer is None:
@@ -102,15 +103,14 @@ class BasicBlockCustom(nn.Module):
         self.downsample = downsample
         self.stride = stride
 
-        assert sncn_type in ['sn', 'cn', 'sncn', 'srm', 'srmcn']
+        assert cnsn_type in ['sn', 'cn', 'cnsn']
 
-        if 'cn' in sncn_type:
-            print('cn_type: {}'.format(cn_type))
+        if 'cn' in cnsn_type:
             crossnorm = CrossNorm(beta=beta, crop=crop)
         else:
             crossnorm = None
 
-        if 'sn' in sncn_type:
+        if 'sn' in cnsn_type:
             print('using SelfNorm module')
             if pos == 'pre' and not self.is_in_equal_out:
                 selfnorm = SelfNorm(in_planes)
@@ -119,13 +119,11 @@ class BasicBlockCustom(nn.Module):
         else:
             selfnorm = None
 
-        # if using selfnorma and crossnorm at the same time, then use them at the same location
-        # separating their positions is not supported currently.
-        self.sncn = CNSN(selfnorm=selfnorm, crossnorm=crossnorm)
+        self.cnsn = CNSN(selfnorm=selfnorm, crossnorm=crossnorm)
         
         self.pos = pos
         if pos is not None:
-            print('{} in residual module: {}'.format(sncn_type, pos))
+            print('{} in residual module: {}'.format(cnsn_type, pos))
             assert pos in ['residual', 'identity', 'pre', 'post']
 
     
@@ -133,7 +131,7 @@ class BasicBlockCustom(nn.Module):
         identity = x
 
         if self.pos == 'pre':
-            out = self.sncn(out)
+            out = self.cnsn(out)
         else:
             out = x
 
@@ -148,16 +146,16 @@ class BasicBlockCustom(nn.Module):
             identity = self.downsample(x)
         
         if self.pos == 'residual':
-            out = self.sncn(out)
+            out = self.cnsn(out)
         elif self.pos == 'identity':
-            identity = self.sncn(identity)
+            identity = self.cnsn(identity)
 
 
         out += identity
         out = self.relu(out)
 
         if self.pos == 'post':
-            return self.sncn(out)
+            return self.cnsn(out)
         else:
             return out
 
@@ -223,7 +221,7 @@ class BottleneckCustom(nn.Module):
 
     expansion = 4
 
-    def __init__(self, inplanes, planes, pos, cn_pos, cn_type, beta, bbx_thres_1, bbx_thres_2, lam_1, lam_2, way, crop, sncn_type, stride=1, downsample=None, groups=1,
+    def __init__(self, inplanes, planes, pos, cn_pos, beta, crop, cnsn_type, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None, custom=False):
         super(BottleneckCustom, self).__init__()
         if norm_layer is None:
@@ -242,40 +240,33 @@ class BottleneckCustom(nn.Module):
         self.custom = custom
         
         if self.custom:
-            assert sncn_type in ['sn', 'cn', 'sncn', 'srm', 'srmcn']
+            assert cnsn_type in ['sn', 'cn', 'cnsn']
 
-            if 'cn' in sncn_type and cn_pos is None:
-                print('cn_type: {}'.format(cn_type))
+            if 'cn' in cnsn_type and cn_pos is None:
                 crossnorm = CrossNorm(crop=crop, beta=beta)
             else:
                 crossnorm = None
 
-            if 'sn' in sncn_type:
+            if 'sn' in cnsn_type:
                 print('using SelfNorm module')
                 if pos == 'pre' and self.downsample is None:
                     selfnorm = SelfNorm(in_planes)
                 else:
                     selfnorm = SelfNorm(planes * self.expansion)
-            elif 'srm' in sncn_type:
-                print('using SRMLayer module')
-                if pos == 'pre' and not self.is_in_equal_out:
-                    selfnorm = SRMLayer(in_planes)
-                else:
-                    selfnorm = SRMLayer(planes * self.expansion)
             else:
                 selfnorm = None
 
             # if using selfnorm and crossnorm at the same time, then use them at the same location
             # separating their positions is not supported currently.
-            self.sncn = CNSN(selfnorm=selfnorm, crossnorm=crossnorm)
-            if 'cn' in sncn_type and cn_pos is not None:
+            self.cnsn = CNSN(selfnorm=selfnorm, crossnorm=crossnorm)
+            if 'cn' in cnsn_type and cn_pos is not None:
                 self.real_cn = CrossNorm(beta=beta, crop=crop)
             self.cn_pos = cn_pos
 
 
             self.pos = pos
             if pos is not None:
-                print('{} in residual module: {}'.format(sncn_type, pos))
+                print('{} in residual module: {}'.format(cnsn_type, pos))
                 assert pos in ['residual', 'identity', 'pre', 'post']
 
 
@@ -285,7 +276,7 @@ class BottleneckCustom(nn.Module):
         out = x
         if self.custom:
             if self.pos == 'pre':
-                out = self.sncn(out)
+                out = self.cnsn(out)
 
         out = self.conv1(out)
         out = self.bn1(out)
@@ -303,9 +294,9 @@ class BottleneckCustom(nn.Module):
         
         if self.custom:
             if self.pos == 'residual':
-                out = self.sncn(out)
+                out = self.cnsn(out)
             elif self.pos == 'identity':
-                identity = self.sncn(out)
+                identity = self.cnsn(out)
                 
 
 
@@ -314,7 +305,7 @@ class BottleneckCustom(nn.Module):
         
         if self.custom:
             if self.pos == 'post':
-                out = self.sncn(out)
+                out = self.cnsn(out)
             if self.cn_pos == 'post':
                 out = self.real_cn(out)
         return out
@@ -325,7 +316,7 @@ class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, block_idxs=None, active_num=None, pos=None, cn_type=None, beta=None, bbx_thres_1=None, bbx_thres_2=None, lam_1=None, lam_2=None, way=None, crop=None, affine=None, sncn_type=None, cn_pos=None):
+                 norm_layer=None, block_idxs=None, active_num=None, pos=None, beta=None, crop=None, cnsn_type=None, cn_pos=None):
         super(ResNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -343,31 +334,13 @@ class ResNet(nn.Module):
         self.groups = groups
         self.base_width = width_per_group
         
-        self.sncn_type = sncn_type
         if block_idxs:
             block_idxs = block_idxs.split('_')
             block_idxs = list(map(int, block_idxs))
         print('block_idxs: {}'.format(block_idxs))
-        print('cn_type: {}'.format(cn_type))
-        if affine:
-            print('affine: {}'.format(affine))
         if beta is not None:
             print('beta: {}'.format(beta))
-        if bbx_thres_1 is not None:
-            assert 0 < bbx_thres_1 < 1
-            print('bbx_thres_1: {}'.format(bbx_thres_1))
-        if bbx_thres_2 is not None:
-            assert 0 < bbx_thres_2 < 1
-            print('bbx_thres_2: {}'.format(bbx_thres_2))
 
-        if lam_1 is not None:
-            print('lam_1: {}'.format(lam_1))
-        if lam_2 is not None:
-            print('lam_2: {}'.format(lam_2))
-
-        if way is not None:
-            assert way in [1, 2]
-            print('way: {}'.format(way))
         if crop is not None:
             print('crop in 2 instance mode: {}'.format(crop))
 
@@ -382,28 +355,27 @@ class ResNet(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         if block_idxs and 1 in block_idxs:
-            self.layer1 = self._make_layer(block, 64, layers[0], pos=pos, cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1, bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2, way=way, crop=crop, sncn_type=sncn_type, cn_pos=cn_pos, custom=True)
+            self.layer1 = self._make_layer(block, 64, layers[0], pos=pos, beta=beta, crop=crop, cnsn_type=cnsn_type, cn_pos=cn_pos, custom=True)
         else:
             self.layer1 = self._make_layer(block, 64, layers[0], custom=False)
 
         if block_idxs and 2 in block_idxs:
-            self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0], pos=pos, cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1, bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2, way=way, crop=crop, sncn_type=sncn_type, cn_pos=cn_pos, custom=True)
+            self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0], pos=pos, beta=beta, crop=crop, cnsn_type=cnsn_type, cn_pos=cn_pos, custom=True)
         else:
             self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0], custom=False)
         
         if block_idxs and 3 in block_idxs:
-            self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1], pos=pos, cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1, bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2, way=way, crop=crop, sncn_type=sncn_type, cn_pos=cn_pos, custom=True)    
+            self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1], pos=pos, beta=beta, crop=crop, cnsn_type=cnsn_type, cn_pos=cn_pos, custom=True)    
         else:
             self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
                                        dilate=replace_stride_with_dilation[1], custom=False)
 
         if block_idxs and 4 in block_idxs:
-            self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2], pos=pos, cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1, bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2, way=way, crop=crop, sncn_type=sncn_type, cn_pos=cn_pos, custom=True)
+            self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2], pos=pos, beta=beta, crop=crop, cnsn_type=cnsn_type, cn_pos=cn_pos, custom=True)
         else:
             self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2], custom=False)
-        #self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         
 
@@ -420,7 +392,7 @@ class ResNet(nn.Module):
             elif isinstance(m, CrossNorm):
                 self.cn_modules.append(m)
 
-        if 'cn' in sncn_type or cn_pos is not None:
+        if 'cn' in cnsn_type or cn_pos is not None:
             self.cn_num = len(self.cn_modules)
             assert self.cn_num > 0
             print('cn_num: {}'.format(self.cn_num))
@@ -439,7 +411,7 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, pos=None, cn_type=None, beta=None, bbx_thres_1=None, bbx_thres_2=None, lam_1=None, lam_2=None, way=None, crop=None, sncn_type=None, cn_pos=None, stride=1, dilate=False, custom=False):
+    def _make_layer(self, block, planes, blocks, pos=None, beta=None, crop=None, cnsn_type=None, cn_pos=None, stride=1, dilate=False, custom=False):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -453,11 +425,11 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, pos=pos, cn_type=cn_type, beta=beta, bbx_thres_1=bbx_thres_1, bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2, way=way, crop=crop, sncn_type=sncn_type, cn_pos=cn_pos, stride=stride, downsample=downsample, 
+        layers.append(block(self.inplanes, planes, pos=pos, beta=beta, crop=crop, cnsn_type=cnsn_type, cn_pos=cn_pos, stride=stride, downsample=downsample, 
             groups=self.groups, base_width=self.base_width, dilation=previous_dilation, norm_layer=norm_layer, custom=custom))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, pos=pos, cn_type=cn_type, cn_pos=cn_pos, beta=beta, bbx_thres_1=bbx_thres_1, bbx_thres_2=bbx_thres_2, lam_1=lam_1, lam_2=lam_2, way=way, crop=crop, sncn_type=sncn_type, groups=self.groups,
+            layers.append(block(self.inplanes, planes, pos=pos, cn_pos=cn_pos, beta=beta, crop=crop, cnsn_type=cnsn_type, groups=self.groups,
                                 base_width=self.base_width, dilation=self.dilation,
                                 norm_layer=norm_layer, custom=custom))
 
@@ -467,8 +439,6 @@ class ResNet(nn.Module):
     def _enable_cross_norm(self):
         active_cn_idxs = np.random.choice(self.cn_num, self.active_num, replace=False).tolist()
         assert len(set(active_cn_idxs)) == self.active_num
-        
-        #print(active_cn_idxs)
         
         for idx in active_cn_idxs:
             self.cn_modules[idx].active = True
@@ -494,10 +464,6 @@ class ResNet(nn.Module):
         aux = x
         x = self.layer4(x)
 
-        #x = self.avgpool(x)
-        #x = torch.flatten(x, 1)
-        #x = self.fc(x)
-
         return {'out': x, 'aux': aux}
 
     def forward(self, x, aug=False):
@@ -505,12 +471,13 @@ class ResNet(nn.Module):
 
         return self._forward_impl(x, aug=aug)
 
-def _resnet(arch, block, layers, pretrained, progress, SRM=False, **kwargs):
+def _resnet(arch, block, layers, pretrained, progress, SN=False, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
-        if SRM:
-            state_dict = torch.load('/research/cbim/vast/yg397/semseg/initmodel/Resnet_residual_1234_SRM.pth')
+        if SN:
+            state_dict = torch.load('/research/cbim/vast/yg397/semseg/initmodel/Resnet_residual_1234_SNupdate.pth')
             print('model loaded from initmodel')
+
         else:
             state_dict = load_state_dict_from_url(model_urls[arch],
                                               progress=progress)
@@ -540,14 +507,14 @@ def resnet34(pretrained=False, progress=True, **kwargs):
                    **kwargs)
 
 
-def resnet50(pretrained=False, progress=True, SRM=False, **kwargs):
+def resnet50(pretrained=False, progress=True, SN=False, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet50', BottleneckCustom, [3, 4, 6, 3], pretrained, progress, SRM=SRM,
+    return _resnet('resnet50', BottleneckCustom, [3, 4, 6, 3], pretrained, progress, SN=SN,
                    **kwargs)
 
 
@@ -632,14 +599,3 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
 
 
 
-if __name__ == '__main__':
-    import pdb 
-    img = torch.randn((8, 3, 128, 128)).cuda()
-    #net = resnet50(pretrained=True, pos='residual', cn_type='2ins_space', beta=1, block_idxs='0_1_2_3', crop='neither', sncn_type='srm', active_num=1)
-    net = resnet50(pretrained=True, pos='post', beta=1, block_idxs='1_2_3_4', crop='neither', sncn_type='srm', active_num=1)
-
-    net = net.cuda()
-    #net = nn.DataParallel(net.cuda())
-    out = net(img, aug=True)
-    pdb.set_trace()
-    print(out.shape)

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import model.resnet as models
-import model.sncn_resnet as sncn_resnet
+import model.cnsn_resnet as cnsn_resnet
 #import model.ibn_resnet as ibn_resnet
 from torchvision.models._utils import IntermediateLayerGetter
 from torchvision.models.segmentation._utils import _SimpleSegmentationModel
@@ -80,23 +80,23 @@ class FCN_RESNET(_SimpleSegmentationModel):
 
 
 
-class FCN_SNCN(nn.Module):
+class FCN_CNSN(nn.Module):
 
     def __init__(self, layers=50, classes=2, criterion=nn.CrossEntropyLoss(ignore_index=255), pretrained=True, config=None):
         
-        super(FCN_SNCN, self).__init__()
+        super(FCN_CNSN, self).__init__()
         assert layers in [50] # only support FCN-50 right now
         assert classes > 1
         self.criterion = criterion
         self.config = config
         self.l1_loss = nn.L1Loss()
         
-        if 'srm' in config.sncn_type:
-            SRM = True
+        if 'sn' in config.cnsn_type:
+            SN = True
         else:
-            SRM = False
+            SN = False
 
-        resnet = sncn_resnet.resnet50(pretrained=pretrained, SRM=SRM, replace_stride_with_dilation=[False, True, True], pos=config.pos, cn_pos=config.cn_pos, lam_2=config.lam_2, beta=config.beta, block_idxs=config.block_idxs, crop=config.crop, sncn_type=config.sncn_type, active_num=config.active_num, cn_type=config.cn_type, bbx_thres_2=config.bbx_thres_2)
+        resnet = cnsn_resnet.resnet50(pretrained=pretrained, SN=SN, replace_stride_with_dilation=[False, True, True], pos=config.pos, cn_pos=config.cn_pos, beta=config.beta, block_idxs=config.block_idxs, crop=config.crop, cnsn_type=config.cnsn_type, active_num=config.active_num)
 
        
         classifier = FCNHead(2048, classes)

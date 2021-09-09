@@ -139,9 +139,9 @@ def main_worker(gpu, ngpus_per_node, argss):
         model = FCNet(layers=args.layers, classes=args.classes, criterion=criterion)
         modules_ori = [model.model.backbone]
         modules_new = [model.model.classifier, model.model.aux_classifier]
-    elif args.arch == 'fcn_sncn':
-        from model.fcn import FCN_SNCN
-        model = FCN_SNCN(layers=args.layers, classes=args.classes, criterion=criterion, config=args)
+    elif args.arch == 'fcn_cnsn':
+        from model.fcn import FCN_CNSN
+        model = FCN_CNSN(layers=args.layers, classes=args.classes, criterion=criterion, config=args)
         modules_ori = [model.model.backbone]
         modules_new = [model.model.classifier, model.model.aux_classifier]
 
@@ -303,7 +303,7 @@ def train(train_loader, model, optimizer, epoch):
         target = target.cuda(non_blocking=True)
         
         r = np.random.rand(1)
-        if 'cn' in args.sncn_type or args.cn_pos is not None:
+        if 'cn' in args.cnsn_type or args.cn_pos is not None:
         #if True:
             if r < args.mix_prob:
                 model.module.model.backbone._enable_cross_norm()

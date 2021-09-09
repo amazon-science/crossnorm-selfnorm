@@ -6,7 +6,7 @@ DATA:
   dataset: gtav
 
 TRAIN:
-  arch: fcn_sncn
+  arch: fcn_cnsn
   layers: 50
   sync_bn: False  # adopt syncbn or not
   train_h: 713
@@ -31,18 +31,16 @@ TRAIN:
   manual_seed:
   print_freq: 10
   save_freq: 10
-  save_path: exp/gtav/fcn50_srm_residual_cn_post_style_thres0.1_prob0.5
+  save_path: exp/gtav/fcn50_sn_residual_cn_post_style
   beta: 1
   pos: residual
-  cn_pos: post
+  cn_pos: post  # if cn_pos is not specified, then cn and sn are used in the same position in 'pos'
   cn_type: '2ins_space'
   block_idxs: '1_2_3_4'
   crop: style
-  bbx_thres_2: 0.1
-  sncn_type: srmcn
+  cnsn_type: cnsn
   active_num: 1
   mix_prob: 0.5
-  lam_2: 0
 
   weight:  # path to initial weight (default: none)
   resume:  # path to latest checkpoint (default: none)

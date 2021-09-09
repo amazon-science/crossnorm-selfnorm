@@ -19,10 +19,10 @@ config=config/${dataset}/${dataset}_${exp_name}.yaml
 now=$(date +"%Y%m%d_%H%M%S")
 
 mkdir -p ${model_dir} ${result_dir}
-cp tool/train_sncn.py ${config} ${exp_dir}
+cp tool/train_cnsn.py ${config} ${exp_dir}
 
 export PYTHONPATH=./
-python -u ${exp_dir}/train_sncn.py \
+python -u ${exp_dir}/train_cnsn.py \
   --config=${config} \
   2>&1 | tee ${model_dir}/train-$now.log
 
