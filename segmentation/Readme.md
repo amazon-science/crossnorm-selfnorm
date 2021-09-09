@@ -28,7 +28,7 @@ This repository is a PyTorch implementation of CrossNorm (CN) and SelfNorm (SN) 
    - Specify the gpu used in config then do training:
 
      ```shell
-     sh tool/train_sncn.sh gtav fcn50_sncn
+     sh tool/train_cnsn.sh gtav fcn50_cnsn
      ```
       
     - For other detailed usage, please refer to the origin repo: https://github.com/hszhao/semseg
