@@ -1,0 +1,71 @@
+DATA:
+  data_root: dataset/gtav/gtav/
+  train_list: dataset/gtav/reduced_train_remove.txt
+  val_list: dataset/gtav/val_remove.txt
+  classes: 19
+  dataset: gtav
+
+TRAIN:
+  arch: fcn_cnsn
+  layers: 50
+  sync_bn: False  # adopt syncbn or not
+  train_h: 713
+  train_w: 713
+  scale_min: 0.5  # minimum random scale
+  scale_max: 2.0  # maximum random scale
+  rotate_min: -10  # minimum random rotate
+  rotate_max: 10  # maximum random rotate
+  zoom_factor: 8  # zoom factor for final prediction during training, be in [1, 2, 4, 8]
+  ignore_label: 255
+  aux_weight: 0.4
+  train_gpu: [6,7]
+  workers: 16  # data loader workers
+  batch_size: 16  # batch size for training
+  batch_size_val: 8  # batch size for validation during training, memory and speed tradeoff
+  base_lr: 0.01
+  epochs: 80
+  start_epoch: 0
+  power: 0.9
+  momentum: 0.9
+  weight_decay: 0.0001
+  manual_seed:
+  print_freq: 10
+  save_freq: 10
+  save_path: exp/gtav/fcn50_sn_residual_cn_post_style
+  beta: 1
+  pos: residual
+  cn_pos: post  # if cn_pos is not specified, then cn and sn are used in the same position in 'pos'
+  cn_type: '2ins_space'
+  block_idxs: '1_2_3_4'
+  crop: style
+  cnsn_type: cnsn
+  active_num: 1
+  mix_prob: 0.5
+
+  weight:  # path to initial weight (default: none)
+  resume:  # path to latest checkpoint (default: none)
+  evaluate: True  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
+  eval_freq: 1
+  evaluate_on_cityscapes: True
+Distributed:
+  dist_url: tcp://127.0.0.1:6789
+  dist_backend: 'nccl'
+  multiprocessing_distributed: False
+  world_size: 1
+  rank: 0
+
+TEST:
+  test_list: dataset/gtav/val.txt
+  split: val  # split in [train, val and test]
+  base_size: 2048  # based size for scaling
+  test_h: 713
+  test_w: 713
+  scales: [1.0]  # evaluation scales, ms as [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
+  has_prediction: False  # has prediction already or not
+  index_start: 0  # evaluation start index in list
+  index_step: 0  # evaluation step index in list, 0 means to end
+  test_gpu: [0]
+  model_path: exp/gtav/fcn50/model/train_epoch_80.pth  # evaluation model path
+  save_folder: exp/gtav/fcn50/result/epoch_80/val/ss  # results save folder
+  colors_path: data/gtav/gtav_colors.txt  # path of dataset colors
+  names_path: data/gtav/gtav_names.txt  # path of dataset category names

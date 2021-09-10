@@ -1,0 +1,5 @@
+__pycache__
+segmentation/dataset/
+*_bkp.py
+exp/
+

@@ -149,7 +149,6 @@ class SelfNorm(nn.Module):
         else:
             return x * g_y.expand_as(x)
 
-
 class CNSN(nn.Module):
     """A module to combine CrossNorm and SelfNorm"""
     def __init__(self, crossnorm, selfnorm):
