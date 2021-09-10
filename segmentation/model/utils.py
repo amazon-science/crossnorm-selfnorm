@@ -6,7 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import functools
 import pdb
-# from torchvision.utils import make_grid, save_image
 
 class PyramidPooling(nn.Module):
     def __init__(self, levels, mode="max"):

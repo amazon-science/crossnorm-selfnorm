@@ -475,7 +475,7 @@ def _resnet(arch, block, layers, pretrained, progress, SN=False, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
         if SN:
-            state_dict = torch.load('/research/cbim/vast/yg397/semseg/initmodel/Resnet_residual_1234_SNupdate.pth')
+            state_dict = torch.load('/PATH/TO/PRETRAINED/MODEL.pth')
             print('model loaded from initmodel')
 
         else:

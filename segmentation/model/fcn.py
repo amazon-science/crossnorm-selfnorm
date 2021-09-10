@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import model.resnet as models
 import model.cnsn_resnet as cnsn_resnet
-#import model.ibn_resnet as ibn_resnet
 from torchvision.models._utils import IntermediateLayerGetter
 from torchvision.models.segmentation._utils import _SimpleSegmentationModel
 from torchvision.models.segmentation.fcn import FCNHead
@@ -105,18 +104,7 @@ class FCN_CNSN(nn.Module):
         self.model = FCN_RESNET(resnet, classifier, aux_classifier) 
         
 
-    def forward(self, x, y=None, aug=False):
-        '''        
-        if aug:
-            
-            B, C, H, W = x.shape
-            x1 = x[:B//2]
-            x2 = x[B//2:]
-            with torch.no_grad():
-                result = self.model(x2, aug=aug)
-
-            x = x1
-        '''
+    def forward(self, x, y=None):
         img = x
 
         result, features = self.model(x, aug=aug)

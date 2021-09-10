@@ -304,7 +304,6 @@ def train(train_loader, model, optimizer, epoch):
         
         r = np.random.rand(1)
         if 'cn' in args.cnsn_type or args.cn_pos is not None:
-        #if True:
             if r < args.mix_prob:
                 model.module.model.backbone._enable_cross_norm()
                 output, main_loss, aux_loss = model(input, target, aug=True)
